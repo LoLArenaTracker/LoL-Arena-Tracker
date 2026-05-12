@@ -1,0 +1,30 @@
+# Built distributables — uploaded to GitHub Releases instead
+dist/
+dist-electron/
+dist-electron-v2/
+
+# PyInstaller build cache
+build/work/
+build/__pycache__/
+__pycache__/
+*.pyc
+*.pyo
+
+# Python virtual environment
+venv/
+.venv/
+env/
+
+# Node modules
+node_modules/
+
+# Logs and database (user-specific, not source code)
+*.log
+*.db
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Electron builder cache
+.cache/
