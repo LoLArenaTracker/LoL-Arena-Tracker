@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Arena Tracker</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #05070d;
+      color: #e8eaf6;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .container {
+      text-align: center;
+      padding: 40px 20px;
+      max-width: 600px;
+      width: 100%;
+    }
+
+    .logo {
+      width: 100px;
+      height: 100px;
+      border-radius: 20px;
+      margin: 0 auto 24px;
+      display: block;
+    }
+
+    h1 {
+      font-size: 2.2rem;
+      font-weight: 700;
+      color: #c89b3c;
+      margin-bottom: 8px;
+      letter-spacing: 0.02em;
+    }
+
+    .badge {
+      display: inline-block;
+      background: rgba(200, 155, 60, 0.15);
+      border: 1px solid rgba(200, 155, 60, 0.4);
+      color: #c89b3c;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      padding: 4px 12px;
+      border-radius: 20px;
+      margin-bottom: 24px;
+      text-transform: uppercase;
+    }
+
+    p {
+      color: #8b92a5;
+      font-size: 1rem;
+      line-height: 1.7;
+      margin-bottom: 32px;
+    }
+
+    .features {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+      margin-bottom: 40px;
+    }
+
+    .feature {
+      background: #0a0e1a;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-size: 0.85rem;
+      color: #8b92a5;
+    }
+
+    .download-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: #c89b3c;
+      color: #1a1200;
+      font-size: 1rem;
+      font-weight: 700;
+      padding: 14px 36px;
+      border-radius: 10px;
+      text-decoration: none;
+      transition: background 0.2s, transform 0.15s;
+      letter-spacing: 0.02em;
+    }
+
+    .download-btn:hover {
+      background: #d4aa4a;
+      transform: translateY(-2px);
+    }
+
+    .download-btn svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    .version {
+      margin-top: 16px;
+      font-size: 0.78rem;
+      color: #5a6178;
+    }
+
+    .divider {
+      border: none;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      margin: 40px 0;
+    }
+
+    .footer {
+      font-size: 0.75rem;
+      color: #5a6178;
+    }
+
+    .warning {
+      margin-top: 12px;
+      font-size: 0.78rem;
+      color: #5a6178;
+      max-width: 420px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <img src="assets/at-logo.png" alt="Arena Tracker Logo" class="logo" />
+    <h1>Arena Tracker</h1>
+    <div class="badge">Beta v1.1.0</div>
+    <p>
+      Track your League of Legends Arena matches. View your stats, champion performance,
+      augment breakdowns, placement trends and more — all in one place.
+    </p>
+
+    <div class="features">
+      <div class="feature">📊 Match History</div>
+      <div class="feature">🏆 Champion Stats</div>
+      <div class="feature">⚡ Augment Tracker</div>
+      <div class="feature">🎯 Placement Trends</div>
+      <div class="feature">🔔 Sync Notifications</div>
+      <div class="feature">🔄 Auto Updates</div>
+    </div>
+
+    <a class="download-btn" href="https://github.com/LoLArenaTracker/LoL-Arena-Tracker/releases/latest/download/Arena.Tracker.Setup.1.1.0.exe">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="7 10 12 15 17 10"/>
+        <line x1="12" y1="15" x2="12" y2="3"/>
+      </svg>
+      Download for Windows
+    </a>
+
+    <div class="version">Windows 10/11 · v1.1.0 · Free</div>
+    <div class="warning">⚠ Windows may show a SmartScreen warning on first install — click "More info" then "Run anyway"</div>
+
+    <hr class="divider" />
+    <div class="footer">
+      Arena Tracker is not affiliated with Riot Games or League of Legends.
+    </div>
+  </div>
+</body>
+</html>
