@@ -2,6 +2,7 @@ const { app, BrowserWindow, ipcMain, shell, session } = require('electron')
 const path = require('path')
 const { spawn } = require('child_process')
 const http = require('http')
+const { autoUpdater } = require('electron-updater')
 
 let mainWindow = null
 let backendProcess = null
@@ -91,7 +92,7 @@ function createWindow() {
     height: 820,
     minWidth: 960,
     minHeight: 640,
-    backgroundColor: '#0a0e1a',
+    backgroundColor: '#05070d',
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
     frame: true,
     webPreferences: {
@@ -147,9 +148,34 @@ app.whenReady().then(async () => {
   }
   createWindow()
 
+  // Auto-updater: check for new GitHub releases
+  if (app.isPackaged) {
+    autoUpdater.checkForUpdates()
+
+    autoUpdater.on('update-available', () => {
+      mainWindow?.webContents.send('update-status', 'downloading')
+    })
+
+    autoUpdater.on('download-progress', (progress) => {
+      mainWindow?.webContents.send('update-progress', Math.round(progress.percent))
+    })
+
+    autoUpdater.on('update-downloaded', () => {
+      mainWindow?.webContents.send('update-status', 'ready')
+    })
+
+    autoUpdater.on('error', (err) => {
+      console.error('Auto-updater error:', err)
+    })
+  }
+
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
+})
+
+ipcMain.handle('install-update', () => {
+  autoUpdater.quitAndInstall()
 })
 
 app.on('window-all-closed', () => {

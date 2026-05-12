@@ -42,6 +42,42 @@ const state = {
   currentPage: 'dashboard',
   syncing: false,
   augmentData: {},
+  notifications: [],
+  notifUnread: 0,
+  notifOpen: false,
+}
+
+// ── Notifications ─────────────────────────────────────────────────────────
+function addNotification(text, type = 'info') {
+  const now = new Date()
+  const time = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  state.notifications.unshift({ text, type, time })
+  if (state.notifications.length > 50) state.notifications.pop()
+  if (!state.notifOpen) {
+    state.notifUnread++
+    const badge = document.getElementById('notif-badge')
+    if (badge) {
+      badge.textContent = state.notifUnread
+      badge.classList.add('visible')
+    }
+  }
+  renderNotifications()
+}
+
+function renderNotifications() {
+  const list = document.getElementById('notif-list')
+  if (!list) return
+  if (state.notifications.length === 0) {
+    list.innerHTML = '<div class="notif-empty">No notifications yet</div>'
+    return
+  }
+  list.innerHTML = state.notifications.map(n => `
+    <div class="notif-item">
+      <span class="notif-dot ${n.type}"></span>
+      <span class="notif-text">${n.text}</span>
+      <span class="notif-time">${n.time}</span>
+    </div>
+  `).join('')
 }
 
 async function loadAugmentData() {
@@ -1338,19 +1374,27 @@ async function updateSyncStatus() {
     dot.className = 'sync-dot syncing'
     text.textContent = 'Loading history…'
     document.getElementById('sync-btn')?.classList.add('spinning')
+    if (!state.syncing) addNotification('Loading match history…', 'info')
+    state.syncing = true
   } else if (status?.syncing) {
     dot.className = 'sync-dot syncing'
     text.textContent = 'Syncing...'
     document.getElementById('sync-btn')?.classList.add('spinning')
+    if (!state.syncing) addNotification('Syncing new games…', 'info')
+    state.syncing = true
   } else if (status?.last_error) {
     dot.className = 'sync-dot error'
     text.textContent = 'Sync error'
     document.getElementById('sync-btn')?.classList.remove('spinning')
+    if (state.syncing) addNotification(`Sync error: ${status.last_error}`, 'error')
+    state.syncing = false
   } else if (status?.last_synced) {
     dot.className = 'sync-dot ok'
     const mins = Math.floor((Date.now() - new Date(status.last_synced)) / 60000)
     text.textContent = mins < 1 ? 'Just synced' : `${mins}m ago`
     document.getElementById('sync-btn')?.classList.remove('spinning')
+    if (state.syncing) addNotification(`Sync complete — ${status.game_count} games tracked`, 'success')
+    state.syncing = false
   } else if (!status?.configured) {
     dot.className = 'sync-dot'
     text.textContent = 'Not configured'
@@ -1368,6 +1412,37 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (item) navigate(item.dataset.page)
   })
   document.getElementById('settings-nav-btn').addEventListener('click', () => navigate('settings'))
+
+  // Notification panel toggle
+  const notifBtn = document.getElementById('notif-btn')
+  const notifPanel = document.getElementById('notif-panel')
+  const notifClear = document.getElementById('notif-clear-btn')
+
+  notifBtn.addEventListener('click', () => {
+    state.notifOpen = !state.notifOpen
+    notifPanel.classList.toggle('open', state.notifOpen)
+    if (state.notifOpen) {
+      state.notifUnread = 0
+      const badge = document.getElementById('notif-badge')
+      if (badge) badge.classList.remove('visible')
+    }
+  })
+
+  notifClear.addEventListener('click', () => {
+    state.notifications = []
+    state.notifUnread = 0
+    const badge = document.getElementById('notif-badge')
+    if (badge) badge.classList.remove('visible')
+    renderNotifications()
+  })
+
+  // Close panel when clicking outside
+  document.addEventListener('click', (e) => {
+    if (state.notifOpen && !notifPanel.contains(e.target) && !notifBtn.contains(e.target)) {
+      state.notifOpen = false
+      notifPanel.classList.remove('open')
+    }
+  })
 
   // Sync button
   document.getElementById('sync-btn').addEventListener('click', async () => {
@@ -1392,4 +1467,28 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Sync status every 15s
   updateSyncStatus()
   setInterval(updateSyncStatus, 15000)
+
+  // ── Auto-updater UI ──────────────────────────────────────────────────────
+  if (window.electronAPI?.onUpdateStatus) {
+    const patchOverlay = document.getElementById('patch-overlay')
+    const patchLabel = document.getElementById('patch-label')
+    const patchBar = document.getElementById('patch-bar')
+
+    window.electronAPI.onUpdateStatus((status) => {
+      if (status === 'downloading') {
+        patchOverlay.style.display = 'flex'
+        patchLabel.textContent = 'Patching...'
+        addNotification('Downloading update…', 'info')
+      } else if (status === 'ready') {
+        patchLabel.textContent = 'Update Ready — Restarting...'
+        addNotification('Update downloaded — restarting!', 'success')
+        setTimeout(() => window.electronAPI.installUpdate(), 2000)
+      }
+    })
+
+    window.electronAPI.onUpdateProgress((pct) => {
+      patchBar.style.width = pct + '%'
+      patchLabel.textContent = `Patching... ${pct}%`
+    })
+  }
 })
