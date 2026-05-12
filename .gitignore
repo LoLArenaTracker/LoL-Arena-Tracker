@@ -25,6 +25,9 @@ node_modules/
 # Claude project memory
 .claude/
 
+# Installed app folder
+Arena Tracker/
+
 # OS files
 .DS_Store
 Thumbs.db
