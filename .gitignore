@@ -22,6 +22,9 @@ node_modules/
 *.log
 *.db
 
+# Claude project memory
+.claude/
+
 # OS files
 .DS_Store
 Thumbs.db
