@@ -1,0 +1,71 @@
+{
+  "name": "arena-tracker",
+  "version": "1.0.9",
+  "description": "League of Legends Arena game mode tracker",
+  "main": "frontend/main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder",
+    "build:backend": "pyinstaller --onefile --name arena-backend backend/main.py",
+    "dev": "electron . --dev"
+  },
+  "keywords": [
+    "league-of-legends",
+    "arena",
+    "tracker"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.0.0"
+  },
+  "build": {
+    "appId": "com.arenatracker.app",
+    "productName": "Arena Tracker",
+    "directories": {
+      "output": "dist-electron-v2"
+    },
+    "files": [
+      "frontend/**/*",
+      "assets/**/*",
+      "!assets/champions/**",
+      "!assets/items/**",
+      "!assets/augments/**"
+    ],
+    "extraResources": [
+      {
+        "from": "dist/arena-backend",
+        "to": "arena-backend",
+        "filter": ["**/*"]
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/app-icon.ico",
+      "signAndEditExecutable": false,
+      "sign": null
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "assets/app-icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "assets/app-icon.ico",
+      "uninstallerIcon": "assets/app-icon.ico",
+      "shortcutName": "Arena Tracker"
+    }
+  },
+  "dependencies": {
+    "app-builder-bin": "^4.2.0"
+  }
+}
