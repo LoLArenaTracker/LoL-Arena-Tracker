@@ -1411,7 +1411,10 @@ async function updateSyncStatus() {
     const mins = Math.floor((Date.now() - new Date(status.last_synced)) / 60000)
     text.textContent = mins < 1 ? 'Just synced' : `${mins}m ago`
     document.getElementById('sync-btn')?.classList.remove('spinning')
-    if (state.syncing) addNotification(`Sync complete — ${status.game_count} games tracked`, 'success')
+    if (state.syncing) {
+      addNotification(`Sync complete — ${status.game_count} games tracked`, 'success')
+      navigate(state.currentPage)
+    }
     state.syncing = false
   } else if (!status?.configured) {
     dot.className = 'sync-dot'

@@ -192,10 +192,9 @@ def get_games(limit=20, offset=0, filters=None, game_mode=None):
     if filters.get("patch"):
         where_clauses.append("g.patch = ?")
         params.append(filters["patch"])
-    mc, mp = _mode_clause(game_mode)
-    if mc:
-        where_clauses.append(mc.lstrip("AND "))
-        params.extend(mp)
+    if game_mode and game_mode in ('duos', 'trios'):
+        where_clauses.append("g.game_mode = ?")
+        params.append(game_mode)
 
     where_sql = ("WHERE " + " AND ".join(where_clauses)) if where_clauses else ""
 
