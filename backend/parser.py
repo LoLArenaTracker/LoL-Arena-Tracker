@@ -46,20 +46,26 @@ def get_augment_tier(augment_data):
     return "silver"
 
 
-def get_duo_partner(match_json, puuid):
+def get_teammates(match_json, puuid):
+    """Return list of all teammates (supports both 2v2 and 3v3 formats)."""
     participants = match_json["info"]["participants"]
     me = next((p for p in participants if p["puuid"] == puuid), None)
     if not me:
-        return None, None, None
+        return []
     my_team = me.get("playerSubteamId") or me.get("teamId")
+    teammates = []
     for p in participants:
         if p["puuid"] == puuid:
             continue
         partner_team = p.get("playerSubteamId") or p.get("teamId")
         if partner_team == my_team:
             name = p.get("summonerName") or p.get("riotIdGameName", "")
-            return name, p.get("championName", ""), p.get("championId", 0)
-    return None, None, None
+            teammates.append({
+                "name": name,
+                "champion_name": p.get("championName", ""),
+                "champion_id": p.get("championId", 0),
+            })
+    return teammates
 
 
 def parse_augments(participant):
@@ -131,14 +137,16 @@ def parse_arena_match(match_json, puuid):
     timestamp = match_json["info"].get("gameStartTimestamp", 0)
     game_date = datetime.fromtimestamp(timestamp / 1000).isoformat() if timestamp else datetime.now().isoformat()
 
-    duo_name, duo_champ_name, duo_champ_id = get_duo_partner(match_json, puuid)
+    teammates = get_teammates(match_json, puuid)
+    t1 = teammates[0] if len(teammates) > 0 else {}
+    t2 = teammates[1] if len(teammates) > 1 else {}
 
     return {
         "match_id": match_json["metadata"]["matchId"],
         "game_date": game_date,
         "champion_id": participant["championId"],
         "champion_name": participant["championName"],
-        "placement": participant.get("placement", 8),
+        "placement": participant.get("placement", 6),
         "kills": participant.get("kills", 0),
         "deaths": participant.get("deaths", 0),
         "assists": participant.get("assists", 0),
@@ -154,9 +162,12 @@ def parse_arena_match(match_json, puuid):
         "heal_on_teammates": participant.get("totalHealsOnTeammates", 0),
         "gold_earned": participant.get("goldEarned", 0),
         "duration_seconds": match_json["info"].get("gameDuration", 0),
-        "duo_partner": duo_name,
-        "duo_champion_name": duo_champ_name,
-        "duo_champion_id": duo_champ_id,
+        "duo_partner": t1.get("name"),
+        "duo_champion_name": t1.get("champion_name"),
+        "duo_champion_id": t1.get("champion_id"),
+        "teammate2_name": t2.get("name"),
+        "teammate2_champion_name": t2.get("champion_name"),
+        "teammate2_champion_id": t2.get("champion_id"),
         "patch": patch,
         "augments": parse_augments(participant),
         "items": parse_items(participant),

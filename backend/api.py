@@ -50,7 +50,7 @@ REGIONAL_URLS = {
     "jp1": "https://asia.api.riotgames.com",
 }
 
-ARENA_QUEUE_ID = 1700
+ARENA_QUEUE_IDS = [1700, 1710]  # 1700 = original 2v2, 1710 = 3v3 (patch 26.10+)
 
 
 class RiotAPIError(Exception):
@@ -126,7 +126,15 @@ class RiotAPI:
 
     def get_arena_match_ids(self, puuid, start=0, count=20):
         url = f"{self._regional_url()}/lol/match/v5/matches/by-puuid/{puuid}/ids"
-        return self._get(url, params={"queue": ARENA_QUEUE_ID, "start": start, "count": count})
+        all_ids = []
+        seen = set()
+        for queue_id in ARENA_QUEUE_IDS:
+            ids = self._get(url, params={"queue": queue_id, "start": start, "count": count})
+            for mid in ids:
+                if mid not in seen:
+                    seen.add(mid)
+                    all_ids.append(mid)
+        return all_ids
 
     def get_match(self, match_id):
         url = f"{self._regional_url()}/lol/match/v5/matches/{match_id}"

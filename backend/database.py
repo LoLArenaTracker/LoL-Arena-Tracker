@@ -31,16 +31,19 @@ def get_conn():
 
 def _migrate(conn):
     for col, typedef in [
-        ("duo_champion_name",    "TEXT"),
-        ("duo_champion_id",      "INTEGER"),
-        ("magic_damage",         "INTEGER DEFAULT 0"),
-        ("physical_damage",      "INTEGER DEFAULT 0"),
-        ("true_damage",          "INTEGER DEFAULT 0"),
-        ("total_heal",           "INTEGER DEFAULT 0"),
-        ("heal_on_teammates",    "INTEGER DEFAULT 0"),
-        ("magic_damage_taken",   "INTEGER DEFAULT 0"),
-        ("physical_damage_taken","INTEGER DEFAULT 0"),
-        ("true_damage_taken",    "INTEGER DEFAULT 0"),
+        ("duo_champion_name",      "TEXT"),
+        ("duo_champion_id",        "INTEGER"),
+        ("magic_damage",           "INTEGER DEFAULT 0"),
+        ("physical_damage",        "INTEGER DEFAULT 0"),
+        ("true_damage",            "INTEGER DEFAULT 0"),
+        ("total_heal",             "INTEGER DEFAULT 0"),
+        ("heal_on_teammates",      "INTEGER DEFAULT 0"),
+        ("magic_damage_taken",     "INTEGER DEFAULT 0"),
+        ("physical_damage_taken",  "INTEGER DEFAULT 0"),
+        ("true_damage_taken",      "INTEGER DEFAULT 0"),
+        ("teammate2_name",         "TEXT"),
+        ("teammate2_champion_name","TEXT"),
+        ("teammate2_champion_id",  "INTEGER"),
     ]:
         try:
             conn.execute(f"ALTER TABLE games ADD COLUMN {col} {typedef}")
@@ -119,8 +122,9 @@ def save_game(game_data):
                 duo_champion_name, duo_champion_id,
                 magic_damage, physical_damage, true_damage,
                 total_heal, heal_on_teammates,
-                magic_damage_taken, physical_damage_taken, true_damage_taken)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                magic_damage_taken, physical_damage_taken, true_damage_taken,
+                teammate2_name, teammate2_champion_name, teammate2_champion_id)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (
                 game_data["match_id"], game_data["game_date"],
                 game_data["champion_id"], game_data["champion_name"],
@@ -134,6 +138,8 @@ def save_game(game_data):
                 game_data.get("true_damage", 0), game_data.get("total_heal", 0),
                 game_data.get("heal_on_teammates", 0), game_data.get("magic_damage_taken", 0),
                 game_data.get("physical_damage_taken", 0), game_data.get("true_damage_taken", 0),
+                game_data.get("teammate2_name"), game_data.get("teammate2_champion_name"),
+                game_data.get("teammate2_champion_id"),
             ),
         )
         game_id = cur.lastrowid
