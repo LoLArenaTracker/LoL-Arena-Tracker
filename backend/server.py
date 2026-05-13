@@ -95,12 +95,12 @@ def get_status():
 
 @app.route("/api/stats/wins-collection")
 def get_wins_collection():
-    return jsonify(_db.get_wins_collection())
+    return jsonify(_db.get_wins_collection(game_mode=request.args.get('game_mode')))
 
 
 @app.route("/api/stats/champions/<path:champion_name>/games")
 def get_champion_games(champion_name):
-    games = _db.get_champion_games(champion_name)
+    games = _db.get_champion_games(champion_name, game_mode=request.args.get('game_mode'))
     return jsonify(games)
 
 
@@ -117,7 +117,7 @@ def get_games():
         "patch": request.args.get("patch"),
     }
     filters = {k: v for k, v in filters.items() if v}
-    result = _db.get_games(limit=limit, offset=offset, filters=filters)
+    result = _db.get_games(limit=limit, offset=offset, filters=filters, game_mode=request.args.get('game_mode'))
     return jsonify(result)
 
 
@@ -131,17 +131,17 @@ def get_game(game_id):
 
 @app.route("/api/stats/champions")
 def get_champion_stats():
-    return jsonify(_db.get_champion_stats())
+    return jsonify(_db.get_champion_stats(game_mode=request.args.get('game_mode')))
 
 
 @app.route("/api/stats/augments")
 def get_augment_stats():
-    return jsonify(_db.get_augment_stats())
+    return jsonify(_db.get_augment_stats(game_mode=request.args.get('game_mode')))
 
 
 @app.route("/api/stats/items")
 def get_item_stats():
-    return jsonify(_db.get_item_stats())
+    return jsonify(_db.get_item_stats(game_mode=request.args.get('game_mode')))
 
 
 @app.route("/api/data/augments")
@@ -173,28 +173,28 @@ def get_augment_data():
 
 @app.route("/api/stats/streak")
 def get_streak():
-    return jsonify(_db.get_streak())
+    return jsonify(_db.get_streak(game_mode=request.args.get('game_mode')))
 
 
 @app.route("/api/stats/best-champion")
 def get_best_champion():
-    return jsonify(_db.get_best_champion() or {})
+    return jsonify(_db.get_best_champion(game_mode=request.args.get('game_mode')) or {})
 
 
 @app.route("/api/stats/top-damage")
 def get_top_damage():
-    return jsonify(_db.get_top_damage_games())
+    return jsonify(_db.get_top_damage_games(game_mode=request.args.get('game_mode')))
 
 
 @app.route("/api/stats/trend")
 def get_trend():
     last_n = int(request.args.get("n", 50))
-    return jsonify(_db.get_placement_trend(last_n))
+    return jsonify(_db.get_placement_trend(last_n, game_mode=request.args.get('game_mode')))
 
 
 @app.route("/api/stats/summary")
 def get_summary():
-    return jsonify(_db.get_summary_stats())
+    return jsonify(_db.get_summary_stats(game_mode=request.args.get('game_mode')))
 
 
 @app.route("/api/assets/<asset_type>/<asset_id>")

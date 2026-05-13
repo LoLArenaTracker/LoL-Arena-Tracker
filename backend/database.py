@@ -44,6 +44,7 @@ def _migrate(conn):
         ("teammate2_name",         "TEXT"),
         ("teammate2_champion_name","TEXT"),
         ("teammate2_champion_id",  "INTEGER"),
+        ("game_mode",              "TEXT DEFAULT 'duos'"),
     ]:
         try:
             conn.execute(f"ALTER TABLE games ADD COLUMN {col} {typedef}")
@@ -106,6 +107,13 @@ def init_db():
         _migrate(conn)
 
 
+def _mode_clause(game_mode):
+    """Return (sql_fragment, params) for optional game_mode filtering."""
+    if game_mode and game_mode in ('duos', 'trios'):
+        return "AND game_mode = ?", [game_mode]
+    return "", []
+
+
 def save_game(game_data):
     with get_conn() as conn:
         existing = conn.execute(
@@ -123,8 +131,9 @@ def save_game(game_data):
                 magic_damage, physical_damage, true_damage,
                 total_heal, heal_on_teammates,
                 magic_damage_taken, physical_damage_taken, true_damage_taken,
-                teammate2_name, teammate2_champion_name, teammate2_champion_id)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                teammate2_name, teammate2_champion_name, teammate2_champion_id,
+                game_mode)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (
                 game_data["match_id"], game_data["game_date"],
                 game_data["champion_id"], game_data["champion_name"],
@@ -140,6 +149,7 @@ def save_game(game_data):
                 game_data.get("physical_damage_taken", 0), game_data.get("true_damage_taken", 0),
                 game_data.get("teammate2_name"), game_data.get("teammate2_champion_name"),
                 game_data.get("teammate2_champion_id"),
+                game_data.get("game_mode", "duos"),
             ),
         )
         game_id = cur.lastrowid
@@ -159,7 +169,7 @@ def save_game(game_data):
         return game_id
 
 
-def get_games(limit=20, offset=0, filters=None):
+def get_games(limit=20, offset=0, filters=None, game_mode=None):
     filters = filters or {}
     where_clauses = []
     params = []
@@ -182,6 +192,10 @@ def get_games(limit=20, offset=0, filters=None):
     if filters.get("patch"):
         where_clauses.append("g.patch = ?")
         params.append(filters["patch"])
+    mc, mp = _mode_clause(game_mode)
+    if mc:
+        where_clauses.append(mc.lstrip("AND "))
+        params.extend(mp)
 
     where_sql = ("WHERE " + " AND ".join(where_clauses)) if where_clauses else ""
 
@@ -235,9 +249,10 @@ def get_game_detail(game_id):
         return game
 
 
-def get_champion_stats():
+def get_champion_stats(game_mode=None):
+    mc, mp = _mode_clause(game_mode)
     with get_conn() as conn:
-        rows = conn.execute("""
+        rows = conn.execute(f"""
             SELECT champion_name, champion_id,
                    COUNT(*) as games,
                    AVG(placement) as avg_placement,
@@ -245,44 +260,50 @@ def get_champion_stats():
                    SUM(CASE WHEN placement = 1 THEN 1 ELSE 0 END) * 100.0 / COUNT(*) as win_rate,
                    SUM(CASE WHEN placement <= 4 THEN 1 ELSE 0 END) * 100.0 / COUNT(*) as top4_rate
             FROM games
+            WHERE 1=1 {mc}
             GROUP BY champion_name, champion_id
             ORDER BY games DESC
-        """).fetchall()
+        """, mp).fetchall()
         return [dict(r) for r in rows]
 
 
-def get_augment_stats():
+def get_augment_stats(game_mode=None):
+    mc, mp = _mode_clause(game_mode)
     with get_conn() as conn:
-        rows = conn.execute("""
+        rows = conn.execute(f"""
             SELECT a.augment_id, a.augment_name, a.tier,
                    COUNT(*) as times_taken,
                    AVG(g.placement) as avg_placement,
                    MIN(g.placement) as best_placement
             FROM augments a JOIN games g ON a.game_id = g.id
+            WHERE 1=1 {mc}
             GROUP BY a.augment_id, a.augment_name, a.tier
             ORDER BY times_taken DESC
-        """).fetchall()
+        """, mp).fetchall()
         return [dict(r) for r in rows]
 
 
-def get_item_stats():
+def get_item_stats(game_mode=None):
+    mc, mp = _mode_clause(game_mode)
     with get_conn() as conn:
-        rows = conn.execute("""
+        rows = conn.execute(f"""
             SELECT i.item_id, i.item_name,
                    COUNT(*) as times_built,
                    AVG(g.placement) as avg_placement
             FROM items i JOIN games g ON i.game_id = g.id
+            WHERE 1=1 {mc}
             GROUP BY i.item_id, i.item_name
             ORDER BY times_built DESC
-        """).fetchall()
+        """, mp).fetchall()
         return [dict(r) for r in rows]
 
 
-def get_placement_trend(last_n=50):
+def get_placement_trend(last_n=50, game_mode=None):
+    mc, mp = _mode_clause(game_mode)
     with get_conn() as conn:
         rows = conn.execute(
-            "SELECT placement, game_date, champion_name, match_id FROM games ORDER BY game_date DESC LIMIT ?",
-            (last_n,),
+            f"SELECT placement, game_date, champion_name, match_id FROM games WHERE 1=1 {mc} ORDER BY game_date DESC LIMIT ?",
+            mp + [last_n],
         ).fetchall()
         return [dict(r) for r in reversed(rows)]
 
@@ -300,10 +321,11 @@ def save_setting(key, value):
         )
 
 
-def get_streak():
+def get_streak(game_mode=None):
+    mc, mp = _mode_clause(game_mode)
     with get_conn() as conn:
         rows = conn.execute(
-            "SELECT placement FROM games ORDER BY game_date DESC LIMIT 20"
+            f"SELECT placement FROM games WHERE 1=1 {mc} ORDER BY game_date DESC LIMIT 20", mp
         ).fetchall()
         if not rows:
             return {"streak": 0, "type": None}
@@ -328,34 +350,38 @@ def get_streak():
             return {"streak": streak, "type": "loss"}
 
 
-def get_best_champion():
+def get_best_champion(game_mode=None):
+    mc, mp = _mode_clause(game_mode)
     with get_conn() as conn:
-        row = conn.execute("""
+        row = conn.execute(f"""
             SELECT champion_name, champion_id,
                    COUNT(*) as games,
                    AVG(placement) as avg_placement,
                    SUM(CASE WHEN placement=1 THEN 1 ELSE 0 END)*100.0/COUNT(*) as win_rate,
                    SUM(CASE WHEN placement<=4 THEN 1 ELSE 0 END)*100.0/COUNT(*) as top4_rate
             FROM games
+            WHERE 1=1 {mc}
             GROUP BY champion_name, champion_id
             HAVING COUNT(*) >= 2
             ORDER BY avg_placement ASC
             LIMIT 1
-        """).fetchone()
+        """, mp).fetchone()
         return dict(row) if row else None
 
 
-def get_top_damage_games():
+def get_top_damage_games(game_mode=None):
+    mc, mp = _mode_clause(game_mode)
     with get_conn() as conn:
-        rows = conn.execute("""
+        rows = conn.execute(f"""
             SELECT g.* FROM games g
             INNER JOIN (
                 SELECT champion_name, MAX(damage_dealt) as max_dmg
-                FROM games GROUP BY champion_name
+                FROM games WHERE 1=1 {mc} GROUP BY champion_name
             ) best ON g.champion_name = best.champion_name
                      AND g.damage_dealt = best.max_dmg
+            WHERE 1=1 {mc}
             ORDER BY g.damage_dealt DESC
-        """).fetchall()
+        """, mp + mp).fetchall()
         games = []
         for row in rows:
             game = dict(row)
@@ -369,22 +395,23 @@ def get_top_damage_games():
         return games
 
 
-def get_wins_collection():
+def get_wins_collection(game_mode=None):
+    mc, mp = _mode_clause(game_mode)
     with get_conn() as conn:
-        overall_max = conn.execute("SELECT MAX(damage_dealt) FROM games").fetchone()[0] or 0
-        rows = conn.execute("""
+        overall_max = conn.execute(f"SELECT MAX(damage_dealt) FROM games WHERE 1=1 {mc}", mp).fetchone()[0] or 0
+        rows = conn.execute(f"""
             SELECT
                 g.champion_name, g.champion_id,
                 COUNT(*) as win_count,
                 MIN(g.game_date) as first_win,
                 MAX(g.game_date) as last_win,
-                (SELECT COUNT(*) FROM games g2 WHERE g2.champion_name = g.champion_name) as total_games,
-                (SELECT MAX(g3.damage_dealt) FROM games g3 WHERE g3.champion_name = g.champion_name) as max_damage
+                (SELECT COUNT(*) FROM games g2 WHERE g2.champion_name = g.champion_name {mc}) as total_games,
+                (SELECT MAX(g3.damage_dealt) FROM games g3 WHERE g3.champion_name = g.champion_name {mc}) as max_damage
             FROM games g
-            WHERE g.placement = 1
+            WHERE g.placement = 1 {mc}
             GROUP BY g.champion_name, g.champion_id
             ORDER BY first_win ASC
-        """).fetchall()
+        """, mp + mp + mp + mp).fetchall()
         result = []
         for r in rows:
             d = dict(r)
@@ -394,12 +421,13 @@ def get_wins_collection():
         return result
 
 
-def get_champion_games(champion_name, limit=500):
+def get_champion_games(champion_name, limit=500, game_mode=None):
+    mc, mp = _mode_clause(game_mode)
     with get_conn() as conn:
         rows = conn.execute(
-            """SELECT g.* FROM games g WHERE g.champion_name = ?
+            f"""SELECT g.* FROM games g WHERE g.champion_name = ? {mc}
                ORDER BY g.game_date DESC LIMIT ?""",
-            (champion_name, limit)
+            [champion_name] + mp + [limit]
         ).fetchall()
         games = []
         for row in rows:
@@ -414,14 +442,20 @@ def get_champion_games(champion_name, limit=500):
         return games
 
 
-def get_summary_stats():
+def get_summary_stats(game_mode=None):
+    mc, mp = _mode_clause(game_mode)
+    top_half = 3 if game_mode == 'trios' else 4
     with get_conn() as conn:
-        row = conn.execute("""
+        row = conn.execute(f"""
             SELECT
                 COUNT(*) as total_games,
                 AVG(placement) as avg_placement,
                 SUM(CASE WHEN placement <= 4 THEN 1 ELSE 0 END) * 100.0 / MAX(COUNT(*), 1) as top4_rate,
+                SUM(CASE WHEN placement <= {top_half} THEN 1 ELSE 0 END) * 100.0 / MAX(COUNT(*), 1) as top_half_rate,
                 SUM(CASE WHEN placement = 1 THEN 1 ELSE 0 END) * 100.0 / MAX(COUNT(*), 1) as win_rate
             FROM games
-        """).fetchone()
-        return dict(row) if row else {}
+            WHERE 1=1 {mc}
+        """, mp).fetchone()
+        result = dict(row) if row else {}
+        result['top_half_threshold'] = top_half
+        return result

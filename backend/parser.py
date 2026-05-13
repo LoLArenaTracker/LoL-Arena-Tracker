@@ -141,6 +141,9 @@ def parse_arena_match(match_json, puuid):
     t1 = teammates[0] if len(teammates) > 0 else {}
     t2 = teammates[1] if len(teammates) > 1 else {}
 
+    queue_id = match_json["info"].get("queueId", 0)
+    game_mode = 'trios' if queue_id == 1710 else 'duos'
+
     return {
         "match_id": match_json["metadata"]["matchId"],
         "game_date": game_date,
@@ -168,6 +171,7 @@ def parse_arena_match(match_json, puuid):
         "teammate2_name": t2.get("name"),
         "teammate2_champion_name": t2.get("champion_name"),
         "teammate2_champion_id": t2.get("champion_id"),
+        "game_mode": game_mode,
         "patch": patch,
         "augments": parse_augments(participant),
         "items": parse_items(participant),

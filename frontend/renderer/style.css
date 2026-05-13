@@ -1363,6 +1363,41 @@ input[type="range"] {
 .clickable-row { cursor: pointer; }
 .clickable-row:hover { background: rgba(255,255,255,0.04); }
 
+/* ── Mode toggle ─────────────────────────────────────────────────────────── */
+.mode-toggle {
+  display: flex;
+  gap: 4px;
+  padding: 10px 10px 4px;
+}
+
+.mode-btn {
+  flex: 1;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 5px 4px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  font-family: inherit;
+}
+
+.mode-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+  border-color: var(--border-strong);
+}
+
+.mode-btn.active {
+  background: var(--accent-gold-dim);
+  border-color: rgba(200, 155, 60, 0.4);
+  color: var(--accent-gold);
+}
+
 /* ── Version label ───────────────────────────────────────────────────────── */
 .version-label {
   text-align: center;
