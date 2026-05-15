@@ -45,19 +45,6 @@ const state = {
   notifications: [],
   notifUnread: 0,
   notifOpen: false,
-  mode: 'all', // 'all' | 'duos' | 'trios'
-}
-
-// ── Mode helper ──────────────────────────────────────────────────────────────
-function modeParam(prefix = '?') {
-  if (state.mode === 'all') return ''
-  return `${prefix}game_mode=${state.mode}`
-}
-
-function modeJoin(existing) {
-  // existing already has '?' — append &game_mode if needed
-  if (state.mode === 'all') return existing
-  return existing + (existing.includes('?') ? '&' : '?') + `game_mode=${state.mode}`
 }
 
 // ── Notifications ─────────────────────────────────────────────────────────
@@ -327,13 +314,12 @@ function dmgTypeBar(label, value, total, color) {
 
 // ── Dashboard ────────────────────────────────────────────────────────────────
 async function loadDashboard(container) {
-  const m = modeParam()
   const [summary, recentData, trend, streak, topDmgGames] = await Promise.all([
-    api('/api/stats/summary' + m),
-    api(modeJoin('/api/games?limit=10')),
-    api(modeJoin('/api/stats/trend?n=20')),
-    api('/api/stats/streak' + m),
-    api('/api/stats/top-damage' + m),
+    api('/api/stats/summary'),
+    api('/api/games?limit=10'),
+    api('/api/stats/trend?n=20'),
+    api('/api/stats/streak'),
+    api('/api/stats/top-damage'),
   ])
 
   const games = recentData?.games || []
@@ -373,9 +359,9 @@ async function loadDashboard(container) {
           <div class="stat-sub">across ${summary?.total_games || 0} games</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">Top ${summary?.top_half_threshold || 4} Rate</div>
-          <div class="stat-value blue">${summary?.top_half_rate != null ? summary.top_half_rate.toFixed(1) + '%' : '—'}</div>
-          <div class="stat-sub">${state.mode === 'trios' ? 'top half (6 teams)' : 'made the podium'}</div>
+          <div class="stat-label">Top 4 Rate</div>
+          <div class="stat-value blue">${summary?.top4_rate ? summary.top4_rate.toFixed(1) + '%' : '—'}</div>
+          <div class="stat-sub">made the podium</div>
         </div>
         <div class="stat-card">
           <div class="stat-label">Win Rate</div>
@@ -592,7 +578,7 @@ function drawSparkline(ctx, data) {
     options: {
       responsive: true, maintainAspectRatio: false,
       scales: {
-        y: { reverse: true, min: 1, max: state.mode === 'trios' ? 6 : 8, ticks: { display: false }, grid: { color: 'rgba(255,255,255,0.05)' } },
+        y: { reverse: true, min: 1, max: 8, ticks: { display: false }, grid: { color: 'rgba(255,255,255,0.05)' } },
         x: { display: false },
       },
       plugins: { legend: { display: false }, tooltip: {
@@ -606,7 +592,7 @@ function drawSparkline(ctx, data) {
 let historyState = { page: 0, limit: 20, filters: {}, total: 0, expandedId: null }
 
 async function loadHistory(container) {
-  const champions = await api('/api/stats/champions' + modeParam())
+  const champions = await api('/api/stats/champions')
   const champNames = (champions || []).map(c => c.champion_name)
 
   container.innerHTML = `
@@ -682,7 +668,6 @@ async function renderHistoryTable() {
     limit: historyState.limit,
     offset: historyState.page * historyState.limit,
     ...historyState.filters,
-    ...(state.mode !== 'all' ? { game_mode: state.mode } : {}),
   })
   const data = await api('/api/games?' + qs)
   const games = data?.games || []
@@ -784,7 +769,7 @@ function augCategory(aug) {
 }
 
 async function loadAugments(container) {
-  const data = await api('/api/stats/augments' + modeParam())
+  const data = await api('/api/stats/augments')
   const augments = data || []
 
   container.innerHTML = `
@@ -855,7 +840,7 @@ function renderAugCards(augs) {
 
 // ── Champions ─────────────────────────────────────────────────────────────────
 async function loadChampions(container) {
-  const data = await api('/api/stats/champions' + modeParam())
+  const data = await api('/api/stats/champions')
   const champions = (data || []).sort((a, b) => b.games - a.games)
 
   container.innerHTML = `
@@ -898,7 +883,7 @@ function attachChampCardClicks() {
 }
 
 async function showChampDetail(champName, champId) {
-  const games = await api(`/api/stats/champions/${encodeURIComponent(champName)}/games` + modeParam())
+  const games = await api(`/api/stats/champions/${encodeURIComponent(champName)}/games`)
   if (!games) return
   const maxDmg = Math.max(...games.map(g => g.damage_dealt), 1)
 
@@ -976,7 +961,7 @@ function renderChampCards(champs) {
 
 // ── Items ─────────────────────────────────────────────────────────────────────
 async function loadItems(container) {
-  const data = await api('/api/stats/items' + modeParam())
+  const data = await api('/api/stats/items')
   const items = data || []
 
   items.sort((a, b) => a.avg_placement - b.avg_placement)
@@ -1028,8 +1013,8 @@ function renderItemsTable(items) {
 // ── Graphs ────────────────────────────────────────────────────────────────────
 async function loadGraphs(container) {
   const [trend, champions] = await Promise.all([
-    api(modeJoin('/api/stats/trend?n=50')),
-    api('/api/stats/champions' + modeParam()),
+    api('/api/stats/trend?n=50'),
+    api('/api/stats/champions'),
   ])
 
   container.innerHTML = `
@@ -1091,18 +1076,17 @@ async function loadGraphs(container) {
         ...chartDefaults,
         scales: {
           ...chartDefaults.scales,
-          y: { ...chartDefaults.scales.y, reverse: true, min: 1, max: state.mode === 'trios' ? 6 : 8, ticks: { color: '#5a6178', stepSize: 1 } },
+          y: { ...chartDefaults.scales.y, reverse: true, min: 1, max: 8, ticks: { color: '#5a6178', stepSize: 1 } },
         },
         plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => `#${c.raw} — ${trend[c.dataIndex]?.champion_name}` } } },
       },
     })
 
     // Distribution
-    const maxPlace = state.mode === 'trios' ? 6 : 8
-    const dist = Array(maxPlace).fill(0)
-    trend.forEach(t => { if (t.placement <= maxPlace) dist[t.placement - 1]++ })
-    const distLabels = ['1st','2nd','3rd','4th','5th','6th','7th','8th'].slice(0, maxPlace)
-    const distColors = ['#c89b3c','#b0bec5','#cd7f32','#4a6a3a','#3a3a4a','#3a3a4a','#3a3a4a','#3a3a4a'].slice(0, maxPlace)
+    const dist = Array(8).fill(0)
+    trend.forEach(t => dist[t.placement - 1]++)
+    const distLabels = ['1st','2nd','3rd','4th','5th','6th','7th','8th']
+    const distColors = ['#c89b3c','#b0bec5','#cd7f32','#4a6a3a','#3a3a4a','#3a3a4a','#3a3a4a','#3a3a4a']
     const ctx2 = document.getElementById('chart-dist')?.getContext('2d')
     if (ctx2) new Chart(ctx2, {
       type: 'bar',
@@ -1330,7 +1314,7 @@ async function loadSettings(container) {
 
 // ── 1st Place Collection ──────────────────────────────────────────────────────
 async function loadWins(container) {
-  const wins = await api('/api/stats/wins-collection' + modeParam())
+  const wins = await api('/api/stats/wins-collection')
   if (!wins) { container.innerHTML = '<div class="empty-state">Could not load data.</div>'; return }
 
   const total = wins.reduce((s, w) => s + w.win_count, 0)
@@ -1427,16 +1411,6 @@ async function updateSyncStatus() {
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
-  // Mode toggle
-  document.getElementById('mode-toggle').addEventListener('click', e => {
-    const btn = e.target.closest('.mode-btn')
-    if (!btn) return
-    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'))
-    btn.classList.add('active')
-    state.mode = btn.dataset.mode
-    navigate(state.currentPage)
-  })
-
   // Nav clicks
   document.getElementById('nav-list').addEventListener('click', e => {
     const item = e.target.closest('.nav-item[data-page]')
